@@ -5,10 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Scanner;
-
-import static javax.xml.bind.DatatypeConverter.parseDate;
 
 public class Main {
     public static void main(String[] args) {
@@ -33,30 +32,31 @@ public class Main {
         }
     }
 
-    private static void printReport(String[] array) throws ParseException {
-        String callType = array[0];
-        String number = array[1];
-        String startTime = parseTime(array[2]);
-        String endTime = parseTime(array[3]);
-        String tariffIndex = array[4];
-
+    private static void printReport(String number, ArrayList<String[]> entries) throws ParseException {
         System.out.println(
-                "Tariff index: " + tariffIndex + "\n" +
+                "Tariff index: " + "00" + "\n" +
                         "----------------------------------------------------------------------------\n" +
                         "Report for phone number " + number + ":\n" +
                         "----------------------------------------------------------------------------\n" +
                         "| Call Type |   Start Time        |     End Time        | Duration | Cost  |\n" +
-                        "----------------------------------------------------------------------------\n" +
-                        "|     01    | 2023-02-03 05:55:06 | 2023-02-03 06:02:49 | 00:07:43 |  5.00 |\n" +
-                        "|     01    | 2023-05-23 21:37:39 | 2023-05-23 21:45:27 | 00:07:48 |  5.00 |\n" +
-                        "|     01    | 2023-08-24 06:16:23 | 2023-08-24 06:27:35 | 00:11:12 |  5.00 |\n" +
-                        "|     01    | 2023-09-08 09:38:34 | 2023-09-08 09:46:13 | 00:07:39 |  1.50 |\n" +
-                        "|     01    | 2023-12-17 20:39:29 | 2023-12-17 20:47:18 | 00:07:49 |  5.00 |\n" +
-                        "|     02    | 2023-01-17 11:08:27 | 2023-01-17 11:17:41 | 00:09:14 |  5.00 |\n" +
-                        "|     02    | 2023-03-17 17:52:45 | 2023-03-17 17:56:11 | 00:03:26 |  1.50 |\n" +
-                        "|     02    | 2023-10-11 14:00:17 | 2023-10-11 14:10:19 | 00:10:02 |  5.00 |\n" +
-                        "----------------------------------------------------------------------------\n" +
-                        "|                                           Total Cost: |     33.00 rubles |\n" +
+                        "----------------------------------------------------------------------------\n"
+        );
+
+        for (String[] entry : entries) {
+
+            String callType = entry[0];
+            String startTime = parseTime(entry[2]);
+            String endTime = parseTime(entry[3]);
+            String tariffIndex = entry[4];
+
+            if (entry[1].equals(number)) {
+                System.out.println("|     " + callType + "    | " + startTime + " | " + endTime + " | ________ |  ____ |");
+            }
+        }
+
+        System.out.println(
+                "----------------------------------------------------------------------------\n" +
+                        "|                                           Total Cost: |     _____ rubles |\n" +
                         "----------------------------------------------------------------------------\n\n"
         );
     }
@@ -70,10 +70,26 @@ public class Main {
 
     private static void readRecords(FileInputStream fin) throws IOException {
         Scanner sc = new Scanner(fin);
+
+        ArrayList<String[]> entries = new ArrayList<>();
+        ArrayList<String> numbers = new ArrayList<>();
+
         while (sc.hasNext()) {
-            String[] array = sc.nextLine().split(", ");
+            String[] entry = sc.nextLine().split(", ");
+
+            String number = entry[1];
+            if (!numbers.contains(number)) {
+                numbers.add(entry[1]);
+            }
+
+            entries.add(entry);
+        }
+
+        for (String number : numbers) {
             try {
-                printReport(array);
+
+                if (number.equals("79270106185")) printReport(number, entries);
+
             } catch (ParseException e) {
                 System.out.println("Print error");
                 System.exit(1);
