@@ -1,8 +1,6 @@
 package org.example;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,13 +31,13 @@ public class Main {
     }
 
     private static void printReport(String number, ArrayList<String[]> entries) throws ParseException {
-        System.out.println(
+        StringBuilder stringBuilder = new StringBuilder(
                 "Tariff index: " + "00" + "\n" +
                         "----------------------------------------------------------------------------\n" +
                         "Report for phone number " + number + ":\n" +
                         "----------------------------------------------------------------------------\n" +
                         "| Call Type |   Start Time        |     End Time        | Duration | Cost  |\n" +
-                        "----------------------------------------------------------------------------\n"
+                        "----------------------------------------------------------------------------\n\n"
         );
 
         for (String[] entry : entries) {
@@ -49,16 +47,53 @@ public class Main {
             String endTime = parseTime(entry[3]);
             String tariffIndex = entry[4];
 
+            long durationL = calcDuration(entry[2], entry[3]);
+            String durationS = String.format("%d:%02d:%02d", durationL / 3600, (durationL % 3600) / 60, (durationL % 60));
+
             if (entry[1].equals(number)) {
-                System.out.println("|     " + callType + "    | " + startTime + " | " + endTime + " | ________ |  ____ |");
+                stringBuilder.append("|     " + callType + "    | " + startTime + " | " + endTime + " | " + durationS + " |  " + calcCost(tariffIndex, durationL) + " |\n");
             }
         }
 
-        System.out.println(
+        stringBuilder.append(
                 "----------------------------------------------------------------------------\n" +
                         "|                                           Total Cost: |     _____ rubles |\n" +
                         "----------------------------------------------------------------------------\n\n"
         );
+
+        try {
+            new File("reports").mkdir();
+            BufferedWriter writer = new BufferedWriter(new FileWriter("reports\\" + number + ".txt"));
+            writer.write(stringBuilder.toString());
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String calcCost(String tariffIndex, long durationL) throws ParseException {
+        if (tariffIndex.equals("06")) {
+            if (durationL < 300) {
+                return "1.00";
+            } else {
+                return "1.00";
+            }
+        }
+        if (tariffIndex.equals("11")) {
+            if (durationL < 100) {
+                return "0.50";
+            } else {
+                return "1.50";
+            }
+        }
+        if (tariffIndex.equals("03")) {
+            return "1.50";
+        }
+        throw new ParseException("Calc cost error", 0);
+    }
+
+    private static long calcDuration(String startTime, String endTime) {
+        return Long.parseLong(endTime) - Long.parseLong(startTime);
     }
 
     private static String parseTime(String input) throws ParseException {
@@ -88,7 +123,7 @@ public class Main {
         for (String number : numbers) {
             try {
 
-                if (number.equals("79270106185")) printReport(number, entries);
+                printReport(number, entries);
 
             } catch (ParseException e) {
                 System.out.println("Print error");
