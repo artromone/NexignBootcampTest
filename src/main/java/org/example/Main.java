@@ -1,6 +1,7 @@
 package org.example;
 
 import java.io.*;
+import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,12 +34,16 @@ public class Main {
     private static void printReport(String number, ArrayList<String[]> entries) throws ParseException {
         StringBuilder stringBuilder = new StringBuilder(
                 "Tariff index: " + "00" + "\n" +
-                        "----------------------------------------------------------------------------\n" +
-                        "Report for phone number " + number + ":\n" +
-                        "----------------------------------------------------------------------------\n" +
-                        "| Call Type |   Start Time        |     End Time        | Duration | Cost  |\n" +
-                        "----------------------------------------------------------------------------\n\n"
+                "----------------------------------------------------------------------------\n" +
+                "Report for phone number " + number + ":\n" +
+                "----------------------------------------------------------------------------\n" +
+                "| Call Type |   Start Time        |     End Time        | Duration | Cost  |\n" +
+                "----------------------------------------------------------------------------\n"
         );
+
+        double totalCost = 0;
+        long totalDuration = 0;
+        boolean connectedUnlimited = false;
 
         for (String[] entry : entries) {
 
@@ -47,18 +52,29 @@ public class Main {
             String endTime = parseTime(entry[3]);
             String tariffIndex = entry[4];
 
-            long durationL = calcDuration(entry[2], entry[3]);
-            String durationS = String.format("%d:%02d:%02d", durationL / 3600, (durationL % 3600) / 60, (durationL % 60));
-
             if (entry[1].equals(number)) {
-                stringBuilder.append("|     " + callType + "    | " + startTime + " | " + endTime + " | " + durationS + " |  " + calcCost(tariffIndex, durationL) + " |\n");
+                connectedUnlimited = tariffIndex.equals("06");
+
+                long durationL = calcDuration(entry[2], entry[3]);
+                totalDuration += durationL;
+                double cost = calcCost(tariffIndex, totalDuration);
+                if (tariffIndex.equals("11") && callType.equals("02")) {
+                    cost = 0;
+                }
+                totalCost += cost;
+
+                String durationS = String.format("%02d:%02d:%02d", durationL / 3600, (durationL % 3600) / 60, (durationL % 60));
+
+                stringBuilder.append("|     " + callType + "    | " + startTime + " | " + endTime + " | " + durationS + " |  " +
+                        new DecimalFormat("#0.00").format(cost) + " |\n");
             }
         }
 
         stringBuilder.append(
                 "----------------------------------------------------------------------------\n" +
-                        "|                                           Total Cost: |     _____ rubles |\n" +
-                        "----------------------------------------------------------------------------\n\n"
+                "|                                           Total Cost: |     " +
+                new DecimalFormat("#0.00").format(calcTotalCost(totalCost, connectedUnlimited)) + " rubles |\n" +
+                "----------------------------------------------------------------------------\n\n"
         );
 
         try {
@@ -71,23 +87,30 @@ public class Main {
         }
     }
 
-    private static String calcCost(String tariffIndex, long durationL) throws ParseException {
+    private static double calcTotalCost(double totalCost, boolean connectedUnlimited) {
+        if (connectedUnlimited) {
+            return totalCost + 100;
+        }
+        return totalCost;
+    }
+
+    private static double calcCost(String tariffIndex, long totalDuration) throws ParseException {
         if (tariffIndex.equals("06")) {
-            if (durationL < 300) {
-                return "1.00";
+            if (totalDuration < 300) {
+                return 0;
             } else {
-                return "1.00";
+                return 1;
             }
         }
         if (tariffIndex.equals("11")) {
-            if (durationL < 100) {
-                return "0.50";
+            if (totalDuration < 100) {
+                return 0.5;
             } else {
-                return "1.50";
+                return 1.5;
             }
         }
         if (tariffIndex.equals("03")) {
-            return "1.50";
+            return 1.5;
         }
         throw new ParseException("Calc cost error", 0);
     }
@@ -122,9 +145,7 @@ public class Main {
 
         for (String number : numbers) {
             try {
-
                 printReport(number, entries);
-
             } catch (ParseException e) {
                 System.out.println("Print error");
                 System.exit(1);
